@@ -1,8 +1,10 @@
 import CalendarDollarIcon from '@elementor/icons/CalendarDollarIcon';
+import ClearIcon from '@elementor/icons/ClearIcon';
 import DotsHorizontalIcon from '@elementor/icons/DotsHorizontalIcon';
 import ExternalLinkIcon from '@elementor/icons/ExternalLinkIcon';
 import RefreshIcon from '@elementor/icons/RefreshIcon';
 import SettingsIcon from '@elementor/icons/SettingsIcon';
+import ThemeBuilderIcon from '@elementor/icons/ThemeBuilderIcon';
 import Box from '@elementor/ui/Box';
 import IconButton from '@elementor/ui/IconButton';
 import Menu from '@elementor/ui/Menu';
@@ -11,17 +13,28 @@ import MenuItemIcon from '@elementor/ui/MenuItemIcon';
 import MenuItemText from '@elementor/ui/MenuItemText';
 import Tooltip from '@elementor/ui/Tooltip';
 import { ELEMENTOR_URL } from '@ea11y-apps/global/constants';
+import { useToastNotification } from '@ea11y-apps/global/hooks';
 import { mixpanelEvents, mixpanelService } from '@ea11y-apps/global/services';
+import { APIScanner } from '@ea11y-apps/scanner/api/APIScanner';
 import { BLOCKS } from '@ea11y-apps/scanner/constants';
 import { useScannerWizardContext } from '@ea11y-apps/scanner/context/scanner-wizard-context';
 import { DisabledMenuItemText } from '@ea11y-apps/scanner/styles/app.styles';
+import { areNoHeadingsDefined } from '@ea11y-apps/scanner/utils/page-headings';
 import { useRef, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
 export const DropdownMenu = () => {
-	const { remediations, isManage, setOpenedBlock, setIsManage, runNewScan } =
-		useScannerWizardContext();
+	const {
+		remediations,
+		isManage,
+		openedBlock,
+		setOpenedBlock,
+		setIsManage,
+		runNewScan,
+	} = useScannerWizardContext();
+	const { error } = useToastNotification();
 	const [isOpened, setIsOpened] = useState(false);
+	const [loading, setLoading] = useState(false);
 	const anchorEl = useRef(null);
 
 	const handleOpen = () => {
@@ -41,11 +54,32 @@ export const DropdownMenu = () => {
 		sendOnClickEvent('Rescan');
 	};
 
+	const onClearCache = async () => {
+		try {
+			setLoading(true);
+			await APIScanner.clearCache({
+				url: window.ea11yScannerData?.pageData?.url,
+			});
+			sendOnClickEvent('Clear cache');
+			handleClose();
+		} catch (e) {
+			error(__('An error occurred.', 'pojo-accessibility'));
+		} finally {
+			setLoading(false);
+		}
+	};
+
 	const goToManagement = () => {
 		handleClose();
 		setIsManage(true);
 		setOpenedBlock(BLOCKS.management);
 		sendOnClickEvent('Manage fixes');
+	};
+
+	const goToHeadingManager = () => {
+		handleClose();
+		setIsManage(true);
+		setOpenedBlock(BLOCKS.headingStructure);
 	};
 
 	return (
@@ -86,6 +120,31 @@ export const DropdownMenu = () => {
 
 					<MenuItemText>{__('Rescan', 'pojo-accessibility')}</MenuItemText>
 				</MenuItem>
+				{remediations.length > 0 ? (
+					<MenuItem
+						onClick={onClearCache}
+						loading={loading}
+						disabled={loading}
+						dense
+					>
+						<MenuItemIcon>
+							<ClearIcon />
+						</MenuItemIcon>
+
+						<MenuItemText>
+							{__('Clear cache', 'pojo-accessibility')}
+						</MenuItemText>
+					</MenuItem>
+				) : (
+					<MenuItem dense>
+						<MenuItemIcon>
+							<ClearIcon color="disabled" />
+						</MenuItemIcon>
+						<DisabledMenuItemText>
+							{__('Clear page cache', 'pojo-accessibility')}
+						</DisabledMenuItemText>
+					</MenuItem>
+				)}
 
 				{!remediations.length ? (
 					<Tooltip
@@ -119,8 +178,8 @@ export const DropdownMenu = () => {
 				) : (
 					<MenuItem
 						onClick={goToManagement}
-						disabled={isManage}
-						selected={isManage}
+						disabled={isManage && BLOCKS.management === openedBlock}
+						selected={isManage && BLOCKS.management === openedBlock}
 						dense
 					>
 						<MenuItemIcon>
@@ -128,6 +187,23 @@ export const DropdownMenu = () => {
 						</MenuItemIcon>
 						<MenuItemText>
 							{__('Manage fixes', 'pojo-accessibility')}
+						</MenuItemText>
+					</MenuItem>
+				)}
+
+				{!areNoHeadingsDefined() && (
+					<MenuItem
+						onClick={goToHeadingManager}
+						dense
+						disabled={isManage && BLOCKS.headingStructure === openedBlock}
+						selected={isManage && BLOCKS.headingStructure === openedBlock}
+					>
+						<MenuItemIcon>
+							<ThemeBuilderIcon />
+						</MenuItemIcon>
+
+						<MenuItemText>
+							{__('Manage headings', 'pojo-accessibility')}
 						</MenuItemText>
 					</MenuItem>
 				)}

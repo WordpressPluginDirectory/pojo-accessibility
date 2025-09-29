@@ -119,4 +119,28 @@ export class APIScanner extends API {
 			data,
 		});
 	}
+
+	static async setHeadingLevel(data) {
+		return APIScanner.request({
+			method: 'POST',
+			path: `${v1Prefix}/remediation/heading-level`,
+			data,
+		});
+	}
+
+	static async dismissHeadingIssue(data) {
+		return APIScanner.request({
+			method: 'POST',
+			path: `${v1Prefix}/remediation/dismiss-heading-issue`,
+			data,
+		});
+	}
+
+	static async clearCache(data) {
+		return APIScanner.request({
+			method: 'DELETE',
+			path: `${v1Prefix}/remediation/clear-cache`,
+			data,
+		});
+	}
 }
